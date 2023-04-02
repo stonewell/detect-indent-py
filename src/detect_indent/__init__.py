@@ -40,6 +40,7 @@ def __make_indents_map(lines, ignore_simple_space):
 
   for line in lines:
     if __is_empty_line(line):
+      logging.debug('skip empty line')
       continue
 
     match = re.match(INDENT_REGEX, line)
@@ -47,6 +48,7 @@ def __make_indents_map(lines, ignore_simple_space):
     if not match:
       previous_size = 0
       previous_indent_type = None
+      logging.debug('skip no indent line')
       continue
 
     indent = len(match.group(0))
@@ -55,7 +57,7 @@ def __make_indents_map(lines, ignore_simple_space):
     if ignore_simple_space and indent_type == INDENT_TYPE_SPACE and indent == 1:
       continue
 
-    if indent_type == previous_indent_type:
+    if indent_type != previous_indent_type:
       previous_size = 0
 
     previous_indent_type = indent_type
@@ -64,19 +66,26 @@ def __make_indents_map(lines, ignore_simple_space):
     weight = 0
 
     indent_diff = abs(indent - previous_size)
+
+    logging.debug('indent:%d, indent_type:%s, p:%d, pt:%s, diff:%d line:%s',
+                  indent, indent_type, previous_size, previous_indent_type,
+                  indent_diff, line)
+
     previous_size = indent
 
     if indent_diff == 0:
       use = 0
       weight = 1
     else:
-      key = f'{"s" if indent_type == INDENT_TYPE_SPACE else "t"}{indent}'
+      key = f'{"s" if indent_type == INDENT_TYPE_SPACE else "t"}{indent_diff}'
 
     try:
       cur_use, cur_weight = indents[key]
       indents[key] = (cur_use + use, cur_weight + weight)
     except KeyError:
       indents[key] = (1, 0)
+
+    logging.debug('save indent, key:%s, v:%s', key, indents[key])
 
   return indents
 
